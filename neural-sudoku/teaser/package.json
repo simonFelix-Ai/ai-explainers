@@ -1,0 +1,9 @@
+{
+  "name": "neural-sudoku-teaser",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "playwright-core": "^1.56.0",
+    "three": "^0.186.1"
+  }
+}

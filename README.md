@@ -8,6 +8,7 @@ videos, subtitles, thumbnails, upload notes and the full animation source.
 | --- | --- | --- |
 | [`proxy-former/`](proxy-former/) | **ProxyFormer**: a dual-stream proxy architecture for ultra-long context and high-resolution generation ([arXiv:2608.23463](https://arxiv.org/abs/2608.23463)) | 中文 7:46 · English 6:36 · 72 s cinematic MV |
 | [`compression_is_routing/`](compression_is_routing/) | **Compression Is Routing**: reconstruction error as an intrinsic routing signal for modular language models (arXiv:2512.16963) | 中文 9:01 · English 8:18 (with cold-open hook) |
+| [`neural-sudoku/teaser/`](neural-sudoku/teaser/) | **Neural Sudoku** teaser: neural networks for hard discrete problems (three.js) | 45 s teaser MV |
 
 Each topic directory has its own README with the structure, sources and rebuild instructions.
 Each topic also has an `outreach/` folder with ready-to-post articles (Reddit, X, Hacker News, Medium, LinkedIn,

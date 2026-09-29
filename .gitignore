@@ -6,3 +6,8 @@ __pycache__/
 
 # MV intermediates
 proxy-former/mv/*.wav
+
+# teaser build artefacts
+neural-sudoku/teaser/node_modules/
+neural-sudoku/teaser/frames/
+neural-sudoku/teaser/*.wav
