@@ -1,0 +1,30 @@
+TITLE:
+ProxyFormer: Proxy tokens for 700K-token training on one 16GB GPU
+
+URL:
+https://arxiv.org/abs/2608.23463
+
+FIRST COMMENT (post immediately after submitting, as the author):
+Author here, independent researcher.
+
+The idea: in every layer, compress each chunk of tokens into a "proxy", run global attention only among the proxies, then inject the result back into the full-resolution token stream. That stream persists across layers, so nothing is thrown away for good. With ratio r, attention cost is (1/r)^2 and decoding keeps only a proxy KV cache of length L/r.
+
+Numbers from the paper (small models, d_model 512, one 16 GB GPU, batch 1):
+- ~21K tokens of history: 15.6 GB -> 2.9 GB of VRAM, 1.3 -> 16.1 it/s vs a full-attention baseline
+- trainable length 716,800 tokens, about 35x a standard decoder on the same card
+- 50-needle retrieval, trained on 64K: 100% at 128K, 99-100% at 256K, 92-95% at 1M
+- WikiText-103 perplexity 21.01 with compressed history (21.36 for the decoder-only baseline without history)
+
+It's implemented with plain reshape/Linear/Conv and standard SDPA, with no custom kernels. It's not a SOTA claim; I don't have the compute to test it at scale.
+
+Code: https://github.com/simonFelix-Ai/proxy-former
+6-minute animated explainer: [VIDEO_LINK]
+
+Disclosure: the method is patent pending. It's free for academic and non-commercial research.
+
+I'd especially like to hear how people see this relative to Funnel/Hourglass Transformers, Perceiver-style latents, and recurrent-memory approaches.
+
+---- POSTING NOTES (do not copy below this line) ----
+- Title is 65 characters (HN limit 80). Don't use "Show HN" (that's for things people can try) and don't use the video as the URL.
+- Weekdays, 8–10 am US Pacific. Never ask for upvotes.
+- HN will debate the patent. Keep replies short and factual.

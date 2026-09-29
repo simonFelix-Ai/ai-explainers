@@ -10,4 +10,5 @@ videos, subtitles, thumbnails, upload notes and the full animation source.
 | [`compression_is_routing/`](compression_is_routing/) | **Compression Is Routing**: reconstruction error as an intrinsic routing signal for modular language models (arXiv:2512.16963) | 中文 9:01 · English 8:18 (with cold-open hook) |
 
 Each topic directory has its own README with the structure, sources and rebuild instructions.
-`compression_is_routing/outreach/` also holds ready-to-post articles for Reddit, X, Hacker News, Medium and LinkedIn.
+Each topic also has an `outreach/` folder with ready-to-post articles (Reddit, X, Hacker News, Medium, LinkedIn,
+Chinese platforms) plus a hook GIF and figures cut from the video.

@@ -12,6 +12,7 @@ made with [Manim Community](https://www.manim.community/). One script renders bo
 | `youtube.md` | Titles, descriptions and tags for upload |
 | `proxyformer_video.py` | All scenes; every string is `tr(chinese, english)` |
 | `build.sh` / `make_srt.py` | Render, concatenate, export SRT + chapters + thumbnail |
+| `outreach/` | Ready-to-post articles (Reddit, X, Hacker News, Medium, LinkedIn, Chinese platforms) with a hook GIF and figures |
 
 ## Structure
 

@@ -1,0 +1,58 @@
+[1/8]  (attach: proxy-former-hook.gif)
+Same 16 GB GPU.
+
+Full attention: ~20K tokens, then out of memory.
+ProxyFormer: 716,800 tokens.
+
+Here's the trick 🧵
+
+[2/8]  (attach: fig-proxy-idea.png)
+Attention is a conference where everyone talks to everyone: 24 people = 276 conversations.
+
+ProxyFormer lets each table elect a representative. Only reps talk to each other (6 conversations), then brief their tables.
+
+[3/8]  (attach: fig-proxy-cost.png)
+Compress every r tokens into one proxy:
+• global attention → (1/r)²
+• length-linear memory → 1/r
+• decoding keeps only a proxy KV cache, L/P long
+
+At r = 64 that's 1/4096 of the attention.
+
+[4/8]  (attach: fig-dual-stream.png)
+The catch with compression is that what's lost is usually gone for good.
+
+Here the full-resolution local stream persists through every layer: compress → interact → inject back. What one layer misses, the next can still pick up.
+
+[5/8]  (attach: fig-memory.png)
+One 16 GB GPU, batch 1, ~21K tokens of history:
+• full attention: 15.6 GB, 1.3 it/s
+• ProxyFormer: 2.9 GB, 16.1 it/s
+
+Fill the card: 716,800 trainable tokens, ~35× longer.
+
+[6/8]  (attach: fig-niah-256k.png)
+Memory without recall is useless, so: 50 needles per document, every one queried, 5,000 lookups per length.
+
+Trained on 64K:
+• 128K: 100%
+• 256K: 99–100%
+• 1M (16× beyond training): 92–95%
+
+[7/8]
+Plain ops only: reshape, Linear, Conv, standard SDPA. No sparse indexers, no custom CUDA.
+
+Honest scope: small models (d_model 512). This shows feasibility, not SOTA. The ceiling at scale is open.
+
+[8/8]
+📄 https://arxiv.org/abs/2608.23463
+💻 https://github.com/simonFelix-Ai/proxy-former
+🎬 [VIDEO_LINK]
+
+Patent pending; free for academic research.
+Looking for compute, funding and collaborators: tangzhongp@qq.com
+
+---- POSTING NOTES (do not copy below this line) ----
+- Post 1, then reply-chain 2–8. Links only in the last post (X down-ranks posts with external links).
+- Every post is under 280 characters, counting links as 23.
+- Once the paper has traction, quote-tweet with the heatmap (fig-niah-1m.png).

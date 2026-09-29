@@ -1,0 +1,27 @@
+Same GPU, 35× longer context.
+
+On a single 16 GB GPU, a standard Transformer runs out of memory at around 20,000 tokens. The architecture I've been building, ProxyFormer, trains on 716,800.
+
+The idea is simple. Instead of making every token attend to every other token, each chunk of tokens elects a "proxy". Only the proxies exchange global information, and then they pass it back to the full-resolution tokens. Those tokens persist through every layer, so detail isn't lost for good.
+
+What that means in practice:
+→ ~21K tokens of history: 15.6 GB → 2.9 GB of GPU memory, and 12× faster training
+→ Multi-needle retrieval (50 needles per document): 99–100% at 4× the training length, 92–95% at one million tokens
+→ Language-modeling quality holds: WikiText-103 perplexity 21.01
+→ Built from standard operators, with no custom GPU kernels
+
+This is early, small-scale work by an independent researcher. It demonstrates feasibility; how far it goes at scale is still open.
+
+The Proxy Token method is patent pending. It's free for academic and non-commercial research, and I'm open to commercial licensing and to partners with compute, funding, or real long-context use cases.
+
+🎬 6-minute animated explainer: [VIDEO_LINK]
+📄 Paper: https://arxiv.org/abs/2608.23463
+💻 Code: https://github.com/simonFelix-Ai/proxy-former
+📧 tangzhongp@qq.com
+
+#MachineLearning #LLM #LongContext #AI #Research
+
+---- POSTING NOTES (do not copy below this line) ----
+- Attach proxy-former-hook.gif or fig-memory.png. Image posts get far more reach than link previews.
+- Optionally put the links in the first comment ("links in comments"); LinkedIn down-ranks external links.
+- This is your best channel for the patent/licensing message. Business readers care about it.
