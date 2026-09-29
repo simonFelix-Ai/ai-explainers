@@ -3,3 +3,6 @@ build/
 media/
 __pycache__/
 *.pyc
+
+# MV intermediates
+proxy-former/mv/*.wav
