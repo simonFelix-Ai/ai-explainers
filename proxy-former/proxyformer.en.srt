@@ -1,0 +1,275 @@
+1
+00:00:00,000 --> 00:00:01,500
+Same 16-gig GPU. A standard Transformer: about 20K tokens, and it's full.
+
+2
+00:00:02,600 --> 00:00:04,300
+ProxyFormer: seven hundred thousand.
+
+3
+00:00:04,850 --> 00:00:06,950
+Same length: one-fifth the memory, twelve times the speed.
+
+4
+00:00:07,200 --> 00:00:09,000
+How?
+
+5
+00:00:09,400 --> 00:00:16,204
+This is ProxyFormer, a new architecture for ultra-long context and high-resolution generation.
+
+6
+00:00:16,204 --> 00:00:22,137
+Its core idea: let a tiny set of 'proxy tokens' carry all the global interaction.
+
+7
+00:00:22,937 --> 00:00:29,271
+In earlier work, 512 tokens were squeezed into 8 vectors and rebuilt almost losslessly.
+
+8
+00:00:29,271 --> 00:00:35,871
+So the natural question: why let expensive attention run on the raw, uncompressed sequence?
+
+9
+00:00:36,671 --> 00:00:40,821
+First, the problem. What makes long context expensive?
+
+10
+00:00:40,821 --> 00:00:46,821
+In attention, every token talks to every other token. Eight tokens means 64 pairs.
+
+11
+00:00:46,821 --> 00:00:51,837
+Double the length and the work quadruples. That's quadratic growth.
+
+12
+00:00:52,837 --> 00:00:56,404
+At a million tokens, that's a trillion pairs.
+
+13
+00:00:57,404 --> 00:01:02,554
+And at inference the KV cache grows linearly, eating GPU memory fast.
+
+14
+00:01:03,354 --> 00:01:06,321
+ProxyFormer's idea fits one analogy.
+
+15
+00:01:06,321 --> 00:01:11,804
+Picture a ten-thousand-person conference. Everyone can't talk to everyone.
+
+16
+00:01:12,604 --> 00:01:16,754
+All-to-all: 24 people already means 276 conversations.
+
+17
+00:01:17,354 --> 00:01:20,854
+Better: each table sends one representative.
+
+18
+00:01:20,854 --> 00:01:25,871
+The rep first listens to everyone at the table. That's compression.
+
+19
+00:01:25,871 --> 00:01:30,687
+Then only the reps meet with each other. Just six conversations.
+
+20
+00:01:30,687 --> 00:01:37,421
+Finally each rep goes back and shares the global picture. That's decompression and injection.
+
+21
+00:01:38,221 --> 00:01:44,687
+Compress every r tokens into one proxy, and global attention drops to one over r squared,
+
+22
+00:01:44,687 --> 00:01:48,454
+and length-dependent memory drops to one over r.
+
+23
+00:01:48,454 --> 00:01:52,604
+At a ratio of 64, attention costs one four-thousandth.
+
+24
+00:01:53,404 --> 00:01:57,037
+But compression always loses something, right?
+
+25
+00:01:57,037 --> 00:02:01,387
+Compress once, and whatever got dropped is gone for good.
+
+26
+00:02:01,387 --> 00:02:07,654
+ProxyFormer does it differently: the fine-grained local stream is kept at every layer.
+
+27
+00:02:07,654 --> 00:02:12,871
+Each layer: local features condense into proxies, micro guiding macro;
+
+28
+00:02:12,871 --> 00:02:15,437
+the proxies interact globally;
+
+29
+00:02:15,437 --> 00:02:21,637
+then the global view is decompressed back into the local stream, macro guiding micro.
+
+30
+00:02:21,637 --> 00:02:26,254
+Meanwhile the local stream itself flows on to the next layer.
+
+31
+00:02:29,054 --> 00:02:35,321
+So detail missed by one compression step is still there for the next layer to pick up.
+
+32
+00:02:36,121 --> 00:02:40,737
+A few more design choices push the compression ratio further.
+
+33
+00:02:40,737 --> 00:02:47,937
+First, cascades: instead of 64x in one jump, compress 4x three times, then decompress symmetrically.
+
+34
+00:02:47,937 --> 00:02:52,821
+And different layers, or older history, can use different ratios.
+
+35
+00:02:53,621 --> 00:03:00,554
+Second, the proxy KV cache. When generating, a new token doesn't look back at the whole history;
+
+36
+00:03:00,554 --> 00:03:05,837
+it only attends to a tiny cache of proxies, cutting memory and latency.
+
+37
+00:03:05,837 --> 00:03:12,771
+Third, asymmetric embeddings: history starts in a narrower space, so savings begin at layer one.
+
+38
+00:03:13,571 --> 00:03:18,054
+And all of it uses the most common deep-learning operators,
+
+39
+00:03:18,054 --> 00:03:24,121
+with no sparse indexers or hand-written CUDA kernels. Easy to reproduce and deploy.
+
+40
+00:03:24,921 --> 00:03:29,404
+There's also an elegant property, borrowed from image VAEs.
+
+41
+00:03:30,404 --> 00:03:37,854
+Raise the compression ratio by alpha: proxies get alpha times shorter, attention drops by alpha squared.
+
+42
+00:03:37,854 --> 00:03:43,004
+Reinvest the savings into channels: make each proxy beta times wider.
+
+43
+00:03:43,004 --> 00:03:49,804
+As long as beta stays under alpha squared, the budget doesn't grow, yet each proxy holds more.
+
+44
+00:03:50,804 --> 00:03:57,737
+A virtuous cycle: compress harder, save more; stronger channels then support even higher ratios.
+
+45
+00:03:58,537 --> 00:04:03,287
+Now the experiments. First: a single 16 GB GPU, batch size one.
+
+46
+00:04:04,287 --> 00:04:10,221
+With ~21K tokens of history, full attention uses 15.6 GB at 1.3 steps per second.
+
+47
+00:04:10,221 --> 00:04:14,504
+ProxyFormer uses 2.9 GB, and runs over ten times faster.
+
+48
+00:04:14,504 --> 00:04:21,237
+Fill the card, and ProxyFormer trains on 716,800 tokens: about 35 times the trainable length.
+
+49
+00:04:22,037 --> 00:04:29,963
+Second: multi-needle retrieval. Fifty passkeys hidden per document, each one queried, 5,000 lookups per length.
+
+50
+00:04:29,963 --> 00:04:37,680
+This is much harder than a single-needle test: all 50 needles must be found, at lengths far beyond training.
+
+51
+00:04:37,680 --> 00:04:40,847
+This model was trained on a 64K window.
+
+52
+00:04:40,847 --> 00:04:47,647
+Push to 128K and 256K, four times the training length: 99 to 100 percent of the needles found.
+
+53
+00:04:47,647 --> 00:04:53,647
+Now push to the limit: 512K, then a million tokens, sixteen times beyond training.
+
+54
+00:04:53,647 --> 00:04:57,730
+Even there, every depth still holds 92 to 95 percent.
+
+55
+00:04:57,730 --> 00:05:03,080
+And no 'lost in the middle': beginning, middle, end, all equally stable.
+
+56
+00:05:03,080 --> 00:05:09,547
+A model trained on just 8K still tops 94% at 256K, 32 times out; beyond that it degrades.
+
+57
+00:05:10,347 --> 00:05:15,163
+With compression this aggressive, does language modeling suffer?
+
+58
+00:05:15,163 --> 00:05:22,947
+On WikiText-103, ProxyFormer with compressed history scores 21.01 perplexity, on par with the 21.36 baseline.
+
+59
+00:05:22,947 --> 00:05:29,013
+Early image-generation runs, in both pixel and latent space, also confirm it works.
+
+60
+00:05:29,813 --> 00:05:35,429
+The same chunk, compress, interact, decompress recipe isn't limited to text.
+
+61
+00:05:35,429 --> 00:05:42,229
+1D text, 2D image patches, 3D video, point clouds and voxels, even higher-dimensional tensors:
+
+62
+00:05:42,229 --> 00:05:45,463
+all handled by the same proxy mechanism.
+
+63
+00:05:45,463 --> 00:05:52,396
+In text-to-image, the text condition talks only to compressed image proxies, so fusion is cheap.
+
+64
+00:05:53,196 --> 00:06:00,000
+To be clear: these experiments prove the architecture works. They're not chasing leaderboards.
+
+65
+00:06:00,000 --> 00:06:04,750
+How far it goes with serious compute is still an open question.
+
+66
+00:06:05,750 --> 00:06:11,683
+ProxyFormer's core method, the Proxy Token, has been formally filed for a patent.
+
+67
+00:06:11,683 --> 00:06:18,150
+Academic and non-commercial use is free. For commercial deployment, let's talk licensing.
+
+68
+00:06:19,150 --> 00:06:28,983
+As an independent researcher, the author welcomes partners with compute, funding, or real use cases to push this architecture to its limits.
+
+69
+00:06:28,983 --> 00:06:33,533
+Paper, code and contact are right here. Thanks for watching.

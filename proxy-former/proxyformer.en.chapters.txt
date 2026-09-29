@@ -1,0 +1,11 @@
+0:00 Intro
+0:36 Why long context is expensive
+1:03 The core idea: proxy tokens
+1:53 Dual-stream architecture
+2:36 Cascades and the proxy KV cache
+3:24 Space-to-channel
+3:58 Memory: 20K → 700K tokens
+4:22 Million-token needle-in-a-haystack
+5:10 Quality: perplexity and images
+5:29 Any dimension
+5:53 Patent & collaboration

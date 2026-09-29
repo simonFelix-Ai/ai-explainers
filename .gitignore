@@ -1,0 +1,5 @@
+# Manim render cache
+build/
+media/
+__pycache__/
+*.pyc
