@@ -1,0 +1,24 @@
+What if an AI model could tell which data belongs to it, without being trained to?
+
+I've just published a technical report as an independent researcher: "Compression Is Routing: Reconstruction Error as an Intrinsic Signal for Modular Language Models."
+
+The core experiment is simple. An 87M-parameter Transformer autoencoder compresses 512 tokens into only 8 latent vectors (64× compression), trained only on source code. Then I asked how exactly it can rebuild different kinds of text:
+
+→ Unseen code: 99.47%
+→ Wikipedia: 47.76%
+→ Random tokens: 0.57%
+
+That gap turns reconstruction error into a built-in fingerprint of where data comes from. In a modular system, each expert can have its own compressor, and inputs go to whichever expert reconstructs them best. There's no separately trained gating network, and every routing decision is explainable. New knowledge becomes a new module while existing modules stay frozen, which is a structural answer to catastrophic forgetting.
+
+It's early work. There's no continual-learning benchmark yet, and I list the limitations openly in the paper. I'm looking for feedback, and for collaborators with compute who want to test how far this scales.
+
+🎬 8-minute animated explainer: [VIDEO_LINK]
+📄 Paper: [PAPER_LINK]
+💻 Code & materials: https://github.com/simonFelix-Ai/compression_is_routing
+
+#MachineLearning #LLM #ArtificialIntelligence #MixtureOfExperts #Research
+
+---- POSTING NOTES (do not copy below this line) ----
+- Attach fig-results.png or the hook GIF as the post image. Image posts get much more reach than link previews.
+- LinkedIn also reduces reach for external links. A common trick is to put the links in the first comment
+  and write "links in the comments" in the post.

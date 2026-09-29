@@ -1,0 +1,363 @@
+1
+00:00:00,000 --> 00:00:02,600
+Teach an AI something new... and it forgets something old.
+
+2
+00:00:02,850 --> 00:00:05,250
+But this tiny model knows what's its own. No router.
+
+3
+00:00:05,500 --> 00:00:06,600
+The secret? Compression.
+
+4
+00:00:06,600 --> 00:00:08,800
+What if forgetting is just a routing problem?
+
+5
+00:00:09,200 --> 00:00:14,933
+Today's idea comes from a short technical report by an independent researcher.
+
+6
+00:00:14,933 --> 00:00:21,333
+Its claim: how well a model compresses your data already tells you who should handle it.
+
+7
+00:00:22,433 --> 00:00:26,650
+Large language models run into three stubborn problems.
+
+8
+00:00:26,650 --> 00:00:31,867
+One: the context window is finite, so long documents simply don't fit.
+
+9
+00:00:31,867 --> 00:00:36,150
+Two: inference is expensive, often a whole rack of GPUs.
+
+10
+00:00:36,150 --> 00:00:42,617
+Three: catastrophic forgetting. Fine-tune on something new, and old skills quietly erode.
+
+11
+00:00:43,817 --> 00:00:50,217
+That third one is why updating a giant model means re-training on mountains of old data.
+
+12
+00:00:51,017 --> 00:00:55,967
+Mixture-of-Experts models help: split the work across specialists.
+
+13
+00:00:55,967 --> 00:01:02,033
+But who decides which expert gets which input? A separately trained gating network.
+
+14
+00:01:02,033 --> 00:01:07,250
+It's one more thing to train, and its decisions are hard to interpret.
+
+15
+00:01:08,050 --> 00:01:13,267
+So here's the question: does routing really need to be learned at all?
+
+16
+00:01:14,667 --> 00:01:19,017
+Start with a popular slogan: compression is intelligence.
+
+17
+00:01:19,017 --> 00:01:22,967
+A good language model predicts the next token well.
+
+18
+00:01:22,967 --> 00:01:28,767
+And if you can predict, you can compress: predictable text needs very few bits.
+
+19
+00:01:28,767 --> 00:01:32,067
+Unfamiliar, chaotic text needs many more.
+
+20
+00:01:32,067 --> 00:01:36,483
+Prediction and compression are two sides of the same coin.
+
+21
+00:01:37,483 --> 00:01:40,983
+But there's a quieter corollary hiding here.
+
+22
+00:01:40,983 --> 00:01:46,583
+A compressor is only good at compressing the kind of data it was trained on.
+
+23
+00:01:46,583 --> 00:01:53,050
+So how well it compresses something tells you whether that something is 'one of its own'.
+
+24
+00:01:53,050 --> 00:01:58,783
+This report turns that intuition into an architecture: compression is routing.
+
+25
+00:01:59,583 --> 00:02:06,183
+To test it, the author trained an 87-million-parameter Transformer autoencoder, end to end.
+
+26
+00:02:06,183 --> 00:02:09,083
+The input is a block of 512 tokens.
+
+27
+00:02:09,083 --> 00:02:14,367
+The encoder squeezes it, through attention, into just 8 latent vectors.
+
+28
+00:02:16,867 --> 00:02:21,150
+512 down to 8: a 64-fold compression of sequence length.
+
+29
+00:02:21,150 --> 00:02:27,817
+The decoder then rebuilds the original sequence, token by token, from those 8 vectors alone.
+
+30
+00:02:30,117 --> 00:02:37,117
+The key is strict isolation. Besides z, the decoder only gets a signal m that carries no content.
+
+31
+00:02:38,117 --> 00:02:45,317
+No shortcut to the original: every bit of information must squeeze through that 8-vector bottleneck.
+
+32
+00:02:46,317 --> 00:02:53,250
+That forces the encoder to learn the structure of the data itself, not just pass a signal along.
+
+33
+00:02:54,250 --> 00:02:59,800
+Training data: source code only, from codeparrot, with the GPT-2 tokenizer.
+
+34
+00:03:00,600 --> 00:03:05,683
+How do we score a reconstruction? With a deliberately strict metric.
+
+35
+00:03:05,683 --> 00:03:08,650
+Say the original is 1, 2, 3, 4, 5...
+
+36
+00:03:08,650 --> 00:03:12,083
+...and the reconstruction is 1, 2, 6, 7, 5.
+
+37
+00:03:12,083 --> 00:03:16,767
+Compare position by position: 1, 2 and 5 match; 3 and 4 don't.
+
+38
+00:03:16,767 --> 00:03:19,333
+Three out of five: 60 percent.
+
+39
+00:03:20,333 --> 00:03:24,283
+That's token-level reconstruction accuracy, or TRA.
+
+40
+00:03:24,283 --> 00:03:28,767
+It only counts exact matches. 'Close enough' earns nothing.
+
+41
+00:03:29,567 --> 00:03:31,817
+Now, the moment of truth.
+
+42
+00:03:32,817 --> 00:03:38,417
+On held-out code it has never seen: 99.47 percent of tokens rebuilt exactly.
+
+43
+00:03:38,417 --> 00:03:43,300
+Switch to English Wikipedia: accuracy collapses to 47.76 percent.
+
+44
+00:03:43,300 --> 00:03:46,800
+And on random token sequences: 0.57 percent.
+
+45
+00:03:46,800 --> 00:03:53,200
+Note that 47.76 is not a guess. Guessing would score about two thousandths of a percent.
+
+46
+00:03:53,200 --> 00:04:01,917
+The model is exploiting what code and English share: vocabulary and basic statistics. The two distributions partly overlap.
+
+47
+00:04:02,917 --> 00:04:09,183
+And random noise is flatly rejected. The model did not degenerate into a copy machine.
+
+48
+00:04:09,183 --> 00:04:15,117
+One compressor, three distributions, three steps. The gap is huge and systematic.
+
+49
+00:04:15,917 --> 00:04:21,850
+So reconstruction error works as a built-in fingerprint of where data comes from.
+
+50
+00:04:23,250 --> 00:04:28,267
+Why is the gap so large? Look at the shape of the latent vectors z.
+
+51
+00:04:28,267 --> 00:04:32,683
+Project code and Wikipedia latents down to two dimensions:
+
+52
+00:04:34,183 --> 00:04:38,933
+Two dense, disconnected islands, with empty space between them.
+
+53
+00:04:38,933 --> 00:04:43,950
+A single straight line separates them. They are linearly separable.
+
+54
+00:04:43,950 --> 00:04:49,617
+So the routing decision is nearly free. No elaborate gating network required.
+
+55
+00:04:49,617 --> 00:04:56,617
+And since each distribution lives in its own region, training one expert barely disturbs another.
+
+56
+00:04:56,617 --> 00:05:00,967
+PCA on the code latents: z has 512 dimensions on paper...
+
+57
+00:05:02,467 --> 00:05:08,400
+...but about 200 principal components already explain 95 percent of the variance.
+
+58
+00:05:08,400 --> 00:05:14,067
+The encoder has learned to drop noise and keep only the skeleton of the data.
+
+59
+00:05:14,867 --> 00:05:19,083
+Put it all together and you get compression as routing.
+
+60
+00:05:19,083 --> 00:05:24,167
+Give each expert its own compressor, trained only on its own domain.
+
+61
+00:05:24,167 --> 00:05:27,400
+A new input arrives. Say, a bit of code.
+
+62
+00:05:27,400 --> 00:05:31,283
+Every compressor tries to compress and rebuild it.
+
+63
+00:05:31,283 --> 00:05:34,717
+Then compare their reconstruction accuracy.
+
+64
+00:05:34,717 --> 00:05:39,333
+Whoever rebuilds it best gets the job. That's the whole rule.
+
+65
+00:05:39,333 --> 00:05:46,533
+No gating network, no extra parameters. The error itself is the routing signal, and you can read it.
+
+66
+00:05:47,533 --> 00:05:54,600
+Now the part that matters for forgetting. What if a whole new domain shows up, like medical notes?
+
+67
+00:05:54,600 --> 00:05:59,283
+Nobody recognizes it. Every compressor reconstructs it poorly.
+
+68
+00:05:59,283 --> 00:06:03,183
+That is itself a signal: time to add a new expert.
+
+69
+00:06:04,183 --> 00:06:09,917
+Mount a medical compressor and train only that. Every old expert stays frozen.
+
+70
+00:06:09,917 --> 00:06:17,300
+Old knowledge is physically untouched, so it can't be overwritten. Forgetting is sidestepped by design.
+
+71
+00:06:17,300 --> 00:06:24,300
+Instead of a monolith you re-forge every time, you get an ecosystem that grows by adding modules.
+
+72
+00:06:25,100 --> 00:06:28,400
+There's also an unexpected bonus: memory.
+
+73
+00:06:28,400 --> 00:06:33,550
+A standard Transformer's KV cache grows linearly with context length.
+
+74
+00:06:33,550 --> 00:06:38,500
+In latent space, 512 positions become 8 vectors: 64 times shorter.
+
+75
+00:06:38,500 --> 00:06:42,983
+The paper's vision: contexts that once needed several A100s
+
+76
+00:06:42,983 --> 00:06:46,550
+might fit on a single consumer graphics card.
+
+77
+00:06:47,350 --> 00:06:53,017
+To be clear, this is a foundational proof of concept, and it has real limits.
+
+78
+00:06:53,017 --> 00:06:57,833
+First, hysteresis. The compression window is a fixed 512 tokens.
+
+79
+00:06:57,833 --> 00:07:03,250
+When the content switches mid-window, say from a novel into a code block,
+
+80
+00:07:03,250 --> 00:07:08,850
+z is still dominated by what came before, so the error spikes at the switch.
+
+81
+00:07:09,850 --> 00:07:16,050
+Second, real text is often interleaved, so one window can straddle two distributions.
+
+82
+00:07:16,050 --> 00:07:22,517
+Third, compute was limited. At this setting, 8 vectors is the smallest length that works.
+
+83
+00:07:22,517 --> 00:07:27,600
+Early experiments suggest even 128-fold compression may be possible.
+
+84
+00:07:27,600 --> 00:07:35,450
+And the forgetting story is an architectural argument; a full continual-learning benchmark is still open work.
+
+85
+00:07:35,450 --> 00:07:42,517
+The author conjectures a scaling law, rooted in entropy, linking latent length to sequence length.
+
+86
+00:07:42,517 --> 00:07:48,717
+The same three-step pattern also showed up on Chinese novels with a custom tokenizer.
+
+87
+00:07:49,517 --> 00:07:51,517
+99.47. 47.76. 0.57.
+
+88
+00:07:51,517 --> 00:07:57,583
+Three numbers that say: how well you compress something tells you whose data it is.
+
+89
+00:07:58,583 --> 00:08:03,200
+From 'compression is prediction' to 'compression is routing'.
+
+90
+00:08:03,200 --> 00:08:10,267
+The author frames this as a starting point, and invites labs with more compute to push it further.
+
+91
+00:08:10,267 --> 00:08:16,133
+The paper and everything else are in the repo linked below. Thanks for watching.

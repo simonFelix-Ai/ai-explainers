@@ -1,0 +1,11 @@
+0:00 Intro
+0:22 Why LLMs forget (and why MoE routing is hard)
+1:14 Compression is intelligence
+1:59 A 64× Transformer autoencoder
+3:00 Measuring reconstruction
+3:29 The three-step cliff: 99.47% / 47.76% / 0.57%
+4:23 Inside the latent space
+5:14 Compression is routing (and forgetting)
+6:25 Bonus: 64× less memory
+6:47 Limitations and open questions
+7:49 Wrap-up

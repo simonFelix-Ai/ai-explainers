@@ -1,0 +1,26 @@
+TITLE:
+Compression Is Routing: Reconstruction error as a routing signal for modular LMs
+
+URL:
+[PAPER_LINK]
+
+FIRST COMMENT (post immediately after submitting, as the author):
+Author here. I'm an independent researcher; this is a short technical report.
+
+I trained an 87M-parameter Transformer autoencoder on code that compresses 512 tokens into 8 latent vectors (64x along the sequence). The decoder never sees the input, only the latents plus a content-free auxiliary signal. Exact-token reconstruction: 99.47% on held-out code, 47.76% on Wikipedia, 0.57% on random tokens (chance is about 0.002%).
+
+The argument: if each expert in a modular system has its own domain compressor, reconstruction error can be the routing signal directly, with no trained gating network, and it's interpretable. New domains get a new compressor while old ones stay frozen, which avoids interference by construction.
+
+What it doesn't show yet: no continual-learning benchmark, fixed 512-token windows lag at domain switches, and interleaved text (prose with code) is a gray zone. Ablations are limited by compute.
+
+There's an 8-minute animated explainer if you prefer visuals: [VIDEO_LINK]
+Repo: https://github.com/simonFelix-Ai/compression_is_routing
+
+I'd especially value pointers to prior work on reconstruction-based routing for language, and thoughts on how this compares to using plain LM perplexity as the routing score.
+
+---- POSTING NOTES (do not copy below this line) ----
+- Submit at https://news.ycombinator.com/submit. Title max is 80 characters; this one is exactly 80, so do not add anything.
+- Don't use "Show HN" (that's for things people can try) and don't post the video as the URL.
+- Best window: weekdays, 8–10 am US Pacific.
+- Never ask friends to upvote. HN detects voting rings and penalizes the post.
+- If it doesn't get traction, you may resubmit once after a few days; HN allows occasional reposts.

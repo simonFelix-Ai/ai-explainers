@@ -1,0 +1,53 @@
+[1/7]  (attach: compress_is_routing-hook.gif)
+Teach an LLM something new and it forgets something old.
+
+What if a model could tell, on its own, which data belongs to it, with no router to train?
+
+A thread on "Compression Is Routing" 🧵
+
+[2/7]  (attach: fig-architecture.png)
+The setup: an 87M-param Transformer autoencoder squeezes 512 tokens into just 8 latent vectors (64× compression).
+
+The decoder never sees the input. Every bit of information has to pass through those 8 vectors.
+
+[3/7]  (attach: fig-results.png)
+Trained on code only. Then I measured exact-token reconstruction:
+
+• held-out code: 99.47%
+• Wikipedia: 47.76%
+• random tokens: 0.57%
+
+Chance is ~0.002%, so this is a steep, systematic three-step cliff.
+
+[4/7]  (attach: fig-latent.png)
+In latent space, code and Wikipedia form two disconnected, linearly separable islands.
+
+And ~200 of 512 dimensions explain 95% of the variance: the encoder keeps the skeleton and drops the noise.
+
+[5/7]  (attach: fig-routing.png)
+So reconstruction error is a free fingerprint of where data came from.
+
+Give each expert its own compressor and route to whichever rebuilds the input best. No gating network. A new domain gets a new compressor; old ones stay frozen.
+
+[6/7]
+What's not shown yet:
+• no continual-learning benchmark (the forgetting argument is architectural)
+• fixed windows lag at domain switches
+• mixed text is a gray zone
+
+Feedback and critique very welcome.
+
+[7/7]
+📄 Paper: [PAPER_LINK]
+🎬 8-min animated explainer: [VIDEO_LINK]
+💻 Repo: https://github.com/simonFelix-Ai/compression_is_routing
+
+If you have compute and want to push this past 64×, let's talk.
+
+---- POSTING NOTES (do not copy below this line) ----
+- Post tweet 1 first, then reply to yourself with tweets 2–7 ("Add another post" in the composer).
+- Put links only in the last tweet. X reduces reach for posts with external links, and the thread
+  should hook people before they hit a link.
+- Once the r/MachineLearning post has comments, add an 8th reply: "Discussion on r/MachineLearning: <link>".
+- Consider tagging accounts that share papers (e.g. @_akhaliq, @omarsar0) only in a reply, and only once
+  the paper is on arXiv. They mostly share arXiv links.
