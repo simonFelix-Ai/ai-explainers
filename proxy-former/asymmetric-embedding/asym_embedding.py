@@ -176,9 +176,92 @@ class A03_TwoRoles(Base):
         box = SurroundingRectangle(VGroup(code, notes), color=GREY_D, buff=0.35, corner_radius=0.1)
         src = Text("src/models/architectures/llm/proxy_former_llm.py", font=MONO, font_size=18, color=GREY_B)
         src.next_to(box, DOWN, buff=0.25)
-        self.say(tr("代码里就是两张嵌入表：历史用 d_history，当下用 d_model。",
-                    "In the code it's simply two embedding tables: d_history for the past, d_model for the present."),
+        self.say(tr("当前实现用的是两张嵌入表：历史用 d_history，当下用 d_model。",
+                    "The current implementation uses two embedding tables: d_history for the past, d_model for the present."),
                  Create(box), LaggedStartMap(FadeIn, code, lag_ratio=0.4), FadeIn(notes), FadeIn(src), run_time=2)
+        self.clear_all()
+
+
+class A03b_Sources(Base):
+    """The 64-dim local stream can come from different sources; the memory math is the same."""
+
+    def construct(self):
+        header = T(tr("局部流从哪里来？", "Where does the local stream come from?"), 42).to_edge(UP, buff=0.4)
+        self.say(tr("不过，64 维的局部流不一定非要来自一张独立的表。",
+                    "But the 64-dim local stream doesn't have to come from a separate table."), FadeIn(header))
+
+        def tok():
+            b = RoundedRectangle(corner_radius=0.08, width=1.05, height=0.55, color=WHITE)
+            return VGroup(b, Text("token", font=MONO, font_size=20).move_to(b))
+
+        def table(label, w, h, color):
+            r = Rectangle(width=w, height=h, stroke_color=color, fill_color=color, fill_opacity=0.25)
+            grid = VGroup(*[Line(r.get_left() + RIGHT * w * k / 6, r.get_left() + RIGHT * w * k / 6 + UP * 0,
+                                 stroke_width=0) for k in range(1)])
+            return VGroup(r, grid, MathTex(label, font_size=26, color=color).move_to(r))
+
+        def vec(n, color, cell=0.1):
+            return VGroup(*[Square(cell, stroke_width=0.6, stroke_color=color, fill_color=color, fill_opacity=0.7)
+                            for _ in range(n)]).arrange(DOWN, buff=0.01)
+
+        rows = VGroup()
+        # 1) separate history table (current implementation)
+        r1 = VGroup(tok(), table(r"h\_embedding\;\; 50{,}257 \times 64", 3.6, 0.7, LOCAL_C), vec(8, LOCAL_C))
+        # 2) shared x_embedding + projection
+        r2 = VGroup(tok(), table(r"x\_embedding\;\; 50{,}257 \times 512", 3.6, 0.7, GEN_C), vec(16, GEN_C, 0.07),
+                    table(r"W:\ 512 \to 64", 1.9, 0.7, PROXY_C), vec(8, LOCAL_C))
+        # 3) other mappings
+        r3 = VGroup(tok(), table(r"\text{other mapping}", 3.6, 0.7, GREY_B), vec(8, LOCAL_C))
+        for r in (r1, r2, r3):
+            r.arrange(RIGHT, buff=0.55)
+        rows.add(r1, r2, r3)
+        rows.arrange(DOWN, buff=0.75, aligned_edge=LEFT).shift(LEFT * 1.3 + DOWN * 0.15)
+        for r in rows:
+            arrows = VGroup(*[Arrow(r[k].get_right(), r[k + 1].get_left(), buff=0.08, stroke_width=3,
+                                    max_tip_length_to_length_ratio=0.25) for k in range(len(r) - 1)])
+            r.add(arrows)
+        labels = VGroup(
+            T(tr("① 独立历史嵌入表（当前实现）", "① separate history table (current code)"), 22, LOCAL_C),
+            T(tr("② 共享生成嵌入 + 投影", "② shared generation table + projection"), 22, PROXY_C),
+            T(tr("③ 其他映射方式", "③ other mappings"), 22, GREY_B),
+        )
+        for lab, r in zip(labels, rows):
+            lab.next_to(r[0], UP, buff=0.12, aligned_edge=LEFT)
+        out_l = MathTex(r"d_{\text{history}} = 64", font_size=30, color=LOCAL_C).next_to(rows, RIGHT, buff=0.35)
+
+        self.say(tr("第一种，就是当前代码的做法：一张独立的 64 维历史嵌入表。",
+                    "Option one is what the current code does: a separate 64-dim history table."),
+                 FadeIn(labels[0]), FadeIn(rows[0], lag_ratio=0.1), run_time=1.5)
+        self.say(tr("第二种：直接复用生成侧的 512 维嵌入，再用一个线性层投影到 64 维。",
+                    "Option two: reuse the 512-dim generation embedding and project it down to 64 with a linear layer."),
+                 FadeIn(labels[1]), FadeIn(rows[1], lag_ratio=0.1), run_time=1.5)
+        self.say(tr("第三种：论文中也说明，局部流还可以通过其他方式得到。",
+                    "Option three: as the paper notes, the local stream can also come from other mappings."),
+                 FadeIn(labels[2]), FadeIn(rows[2], lag_ratio=0.1), run_time=1.2)
+        self.play(Write(out_l))
+        self.play(FadeOut(VGroup(rows, labels, out_l)))
+
+        cmp = VGroup(
+            VGroup(T(tr("① 独立表", "① separate table"), 28, LOCAL_C),
+                   MathTex(r"50{,}257 \times 64 \approx 3.2\text{M params}", font_size=36, color=LOCAL_C)),
+            VGroup(T(tr("② 投影矩阵", "② projection"), 28, PROXY_C),
+                   MathTex(r"512 \times 64 = 32{,}768 \text{ params}", font_size=36, color=PROXY_C)),
+        )
+        for c in cmp:
+            c.arrange(RIGHT, buff=0.6)
+        cmp.arrange(DOWN, buff=0.5, aligned_edge=LEFT).shift(UP * 0.7)
+        pros = T(tr("② 的好处：同一个 token 在历史与当下共享语义，参数少约 98 倍",
+                    "Option ②: one token, one shared meaning in past and present, ~98x fewer parameters"), 26, GREY_A)
+        fit(pros, 12.5).next_to(cmp, DOWN, buff=0.5)
+        self.say(tr("第二种的好处：历史和当下共享同一套词表语义，而且投影只有 3.3 万个参数。",
+                    "Option two keeps one shared vocabulary meaning for past and present, with only 33 thousand parameters."),
+                 LaggedStartMap(FadeIn, cmp, shift=RIGHT * 0.2, lag_ratio=0.3), FadeIn(pros))
+        same = T(tr("无论来源如何：进入网络后都是 64 维，显存账完全一样",
+                    "Whatever the source: 64 dims once inside the network, the same memory math"), 30, YELLOW)
+        fit(same, 12.5).next_to(pros, DOWN, buff=0.6)
+        self.say(tr("关键是：无论从哪里来，局部流进入网络后都是 64 维，后面的显存账完全一样。",
+                    "The key point: whatever the source, the local stream is 64-wide inside the network, "
+                    "so the memory math is identical."), FadeIn(same, shift=UP * 0.2))
         self.clear_all()
 
 
@@ -374,13 +457,14 @@ class A07_Outro(Base):
         self.clear_all(run_time=1.0)
 
 
-SCENES = [A00_Hook, A01_Title, A02_WhereMemoryGoes, A03_TwoRoles, A04_DualStream, A05_Accounting, A06_Results,
+SCENES = [A00_Hook, A01_Title, A02_WhereMemoryGoes, A03_TwoRoles, A03b_Sources, A04_DualStream, A05_Accounting, A06_Results,
           A07_Outro]
 
 CHAPTERS = {
     "A00_Hook": tr("开场", "Intro"),
     "A02_WhereMemoryGoes": tr("显存花在哪里", "Where the memory goes"),
     "A03_TwoRoles": tr("历史与当下的分工", "Two jobs, two widths"),
+    "A03b_Sources": tr("局部流的来源", "Sources of the local stream"),
     "A04_DualStream": tr("窄历史流与宽代理", "Narrow stream, wide proxies"),
     "A05_Accounting": tr("算一笔账", "The math"),
     "A06_Results": tr("实测结果", "Measured results"),

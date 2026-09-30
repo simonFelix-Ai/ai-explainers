@@ -47,121 +47,145 @@ With long context, L is huge. You can shrink L, or you can shrink d.
 Proxy tokens shrink L. This video is about shrinking d.
 
 13
-00:00:52,133 --> 00:00:58,400
+00:00:52,133 --> 00:00:58,409
 The key observation: history tokens and current tokens have completely different jobs.
 
 14
-00:00:58,400 --> 00:01:04,867
+00:00:58,409 --> 00:01:04,876
 Current tokens are few, but they predict the next word directly, so they need full width.
 
 15
-00:01:04,867 --> 00:01:11,800
+00:01:04,876 --> 00:01:11,809
 History tokens are countless, but their only job is to be remembered and condensed into proxies.
 
 16
-00:01:11,800 --> 00:01:17,083
+00:01:11,809 --> 00:01:17,093
 So give them different widths: 64 for the history, 512 for the present.
 
 17
-00:01:18,083 --> 00:01:24,883
-In the code it's simply two embedding tables: d_history for the past, d_model for the present.
+00:01:18,093 --> 00:01:25,409
+The current implementation uses two embedding tables: d_history for the past, d_model for the present.
 
 18
-00:01:25,683 --> 00:01:30,567
-The key: the history's local stream stays 64-wide in every layer.
+00:01:26,209 --> 00:01:31,493
+But the 64-dim local stream doesn't have to come from a separate table.
 
 19
-00:01:31,767 --> 00:01:37,317
-Each chunk of history is compressed into a proxy, and proxies are 512 wide.
+00:01:31,493 --> 00:01:36,976
+Option one is what the current code does: a separate 64-dim history table.
 
 20
-00:01:37,317 --> 00:01:44,567
-The generation side is 512 wide and attends only to the proxies, never to the narrow stream directly.
+00:01:36,976 --> 00:01:43,976
+Option two: reuse the 512-dim generation embedding and project it down to 64 with a linear layer.
 
 21
-00:01:45,567 --> 00:01:51,633
-At ratio 64, one proxy summarizes 64 tokens times 64 dims, 4,096 numbers, into 512.
+00:01:43,976 --> 00:01:50,176
+Option three: as the paper notes, the local stream can also come from other mappings.
 
 22
-00:01:51,633 --> 00:01:57,900
-The stream is narrow, the proxy is wide: information is regrouped into wider channels.
+00:01:52,176 --> 00:01:59,493
+Option two keeps one shared vocabulary meaning for past and present, with only 33 thousand parameters.
 
 23
-00:01:57,900 --> 00:02:04,233
-And the narrow stream persists, so detail one layer missed is still there for the next.
+00:01:59,493 --> 00:02:07,743
+The key point: whatever the source, the local stream is 64-wide inside the network, so the memory math is identical.
 
 24
-00:02:05,033 --> 00:02:11,300
-Let's do the math: a 716,800-token history, 16-bit, one hidden-state tensor per layer.
+00:02:08,543 --> 00:02:13,426
+The key: the history's local stream stays 64-wide in every layer.
 
 25
-00:02:11,300 --> 00:02:16,183
-At full width: 716,800 times 512 times 2 bytes, 734 MB per layer.
+00:02:14,626 --> 00:02:20,176
+Each chunk of history is compressed into a proxy, and proxies are 512 wide.
 
 26
-00:02:16,183 --> 00:02:19,750
-The 64-dim history stream needs just 91.8 MB.
+00:02:20,176 --> 00:02:27,426
+The generation side is 512 wide and attends only to the proxies, never to the narrow stream directly.
 
 27
-00:02:19,750 --> 00:02:24,700
-There are only 11,200 proxies; even at 512 wide they take 11.5 MB.
+00:02:28,426 --> 00:02:34,493
+At ratio 64, one proxy summarizes 64 tokens times 64 dims, 4,096 numbers, into 512.
 
 28
-00:02:24,700 --> 00:02:28,717
-Together: 103 MB, 7.1 times smaller than full width.
+00:02:34,493 --> 00:02:40,759
+The stream is narrow, the proxy is wide: information is regrouped into wider channels.
 
 29
-00:02:28,717 --> 00:02:37,167
-Over 10 layers, 7.3 GB versus 1.0 GB. Training keeps several such tensors per layer, so the savings stack the same way.
+00:02:40,759 --> 00:02:47,101
+And the narrow stream persists, so detail one layer missed is still there for the next.
 
 30
-00:02:37,967 --> 00:02:44,567
-The cost is one extra history table: 50K vocabulary times 64, about 3.2 million parameters.
+00:02:47,901 --> 00:02:54,177
+Let's do the math: a 716,800-token history, 16-bit, one hidden-state tensor per layer.
 
 31
-00:02:44,567 --> 00:02:51,700
-It's a fixed cost that never grows with the history, while the activation savings grow with length.
+00:02:54,177 --> 00:02:59,061
+At full width: 716,800 times 512 times 2 bytes, 734 MB per layer.
 
 32
-00:02:52,500 --> 00:02:59,633
-Every measured result in the paper uses this setup: 512 on the generation side, 64 for the history.
+00:02:59,061 --> 00:03:02,627
+The 64-dim history stream needs just 91.8 MB.
 
 33
-00:02:59,633 --> 00:03:04,517
-With ~21K tokens of history, memory falls from 15.6 GB to 2.9 GB.
+00:03:02,627 --> 00:03:07,577
+There are only 11,200 proxies; even at 512 wide they take 11.5 MB.
 
 34
-00:03:04,517 --> 00:03:08,467
-One 16 GB card trains on 716,800 tokens of history.
+00:03:07,577 --> 00:03:11,594
+Together: 103 MB, 7.1 times smaller than full width.
 
 35
-00:03:08,467 --> 00:03:15,133
-A 64-dim history doesn't forget: multi-needle retrieval stays above 90% at a million tokens.
+00:03:11,594 --> 00:03:20,044
+Over 10 layers, 7.3 GB versus 1.0 GB. Training keeps several such tensors per layer, so the savings stack the same way.
 
 36
-00:03:15,133 --> 00:03:18,100
-And language-modeling quality holds.
+00:03:20,844 --> 00:03:27,444
+The cost is one extra history table: 50K vocabulary times 64, about 3.2 million parameters.
 
 37
-00:03:18,100 --> 00:03:24,767
-To be precise: these are results of the full design, not an ablation of the embedding alone.
+00:03:27,444 --> 00:03:34,577
+It's a fixed cost that never grows with the history, while the activation savings grow with length.
 
 38
-00:03:25,567 --> 00:03:28,800
-d_history is really a knob you can turn.
+00:03:35,377 --> 00:03:42,511
+Every measured result in the paper uses this setup: 512 on the generation side, 64 for the history.
 
 39
-00:03:28,800 --> 00:03:34,467
-Narrower saves more, wider keeps more detail; the paper's experiments use 64.
+00:03:42,511 --> 00:03:47,395
+With ~21K tokens of history, memory falls from 15.6 GB to 2.9 GB.
 
 40
-00:03:34,467 --> 00:03:40,467
-A natural extension: make older history narrower still. That remains to be tested.
+00:03:47,395 --> 00:03:51,345
+One 16 GB card trains on 716,800 tokens of history.
 
 41
-00:03:41,267 --> 00:03:45,683
-Long history, narrow history. That's asymmetric embedding.
+00:03:51,345 --> 00:03:58,011
+A 64-dim history doesn't forget: multi-needle retrieval stays above 90% at a million tokens.
 
 42
-00:03:45,683 --> 00:03:54,133
+00:03:58,011 --> 00:04:00,978
+And language-modeling quality holds.
+
+43
+00:04:00,978 --> 00:04:07,645
+To be precise: these are results of the full design, not an ablation of the embedding alone.
+
+44
+00:04:08,445 --> 00:04:11,678
+d_history is really a knob you can turn.
+
+45
+00:04:11,678 --> 00:04:17,345
+Narrower saves more, wider keeps more detail; the paper's experiments use 64.
+
+46
+00:04:17,345 --> 00:04:23,345
+A natural extension: make older history narrower still. That remains to be tested.
+
+47
+00:04:24,145 --> 00:04:28,561
+Long history, narrow history. That's asymmetric embedding.
+
+48
+00:04:28,561 --> 00:04:37,011
 The Proxy Token method is patent pending, and collaborations are welcome. Paper and code are here. Thanks for watching.
