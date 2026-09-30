@@ -11,3 +11,4 @@ proxy-former/mv/*.wav
 neural-sudoku/teaser/node_modules/
 neural-sudoku/teaser/frames/
 neural-sudoku/teaser/*.wav
+proxy-former/asymmetric-embedding/build/
